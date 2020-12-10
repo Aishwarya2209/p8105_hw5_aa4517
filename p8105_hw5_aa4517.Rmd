@@ -6,19 +6,20 @@ output: github_document
 
 This is my solution to HW5
 
-```{r, message = FALSE, warning = FALSE}
+```{r setup, include=FALSE}
 library(tidyverse)
+library(rvest)
+library(patchwork)
 knitr::opts_chunk$set(
   fig.width = 6,
   fig.asp = .6,
   out.width = "90%"
-  )
+)
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
-
 options(
   ggplot2.continuous.colour = "viridis",
   ggplot2.continuous.fill = "viridis"
-  )
+)
 scale_colour_discrete = scale_color_viridis_d
 scale_fill_discrete = scale_fill_viridis_d
 ```
@@ -26,7 +27,7 @@ scale_fill_discrete = scale_fill_viridis_d
 
 ## Problem 1
 
-Reading the raw data. 
+Read in the data. 
 
 ```{r, message = FALSE, warning = FALSE}
 homicide_df = 
@@ -43,7 +44,7 @@ homicide_df =
   filter(city_state != "Tulsa_AL")
 ```
 
-To estimate the proportion of homicides that are unsolved
+Let's look at this a bit
 
 ```{r, message = FALSE, warning = FALSE}
 aggregate_df = 
@@ -65,7 +66,7 @@ prop.test(
   broom::tidy()
 ```
 
-Iterating
+Try to iterate..
 
 ```{r}
 results_df = 
@@ -89,4 +90,59 @@ results_df %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
+## Problem 2
+
+### Part 1 
+
+Reading just one file - 
+```{r}
+data_1 = read_csv("lda_data/con_01.csv")
+```
+
+Reading all the files and creating a dataframe 
+
+```{r}
+path_df = 
+  tibble(
+    path = list.files("lda_data"),
+  ) %>% 
+  mutate(
+    path = str_c("lda_data/", path),
+    data = map(.x = path, ~read_csv(.x))
+  ) %>% 
+  unnest(data) %>% 
+  mutate(
+    path = str_replace(path, "lda_data/", ""),
+    path = str_replace(path, ".csv", "")
+    ) %>% 
+  separate(path, into = c("study_arm", "subject_id"), sep = "_") %>% 
+  mutate(
+    subject_id = as.numeric(subject_id)
+  )
+  path_df =
+    pivot_longer(
+    path_df,
+    week_1:week_8,
+    names_to = "week", 
+    values_to = "data")
+```
+
+### Part 2 
+```{r spagett}
+spagett_plot = 
+  path_df %>% 
+  group_by(study_arm, subject_id) %>% 
+  ggplot(aes(x = week, y = data, group = subject_id, color = subject_id)) +
+  geom_line() +
+  geom_point(alpha = 0.5) +
+  facet_grid(study_arm ~ .) +
+  labs(
+    title = "Observed Values for Control vs. Experimental Arms over Time",
+    x = "Values",
+    y = "Week of Observation"
+  )
+spagett_plot
+```
+
+Based on our spaghetti plot,the experimental group had an increase in values over time and the control group had a slight decrease in values over the course of observation. There was substantial variation within each group for any given week, from spreads of roughly 2.5 to 5 units.
 
