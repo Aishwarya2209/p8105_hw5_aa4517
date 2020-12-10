@@ -144,5 +144,85 @@ spagett_plot =
 spagett_plot
 ```
 
-Based on our spaghetti plot,the experimental group had an increase in values over time and the control group had a slight decrease in values over the course of observation. There was substantial variation within each group for any given week, from spreads of roughly 2.5 to 5 units.
+Based on our spaghetti plot,the experimental group had an increase in values over time and the control group had a slight decrease in values over the course of observation. There is a substantial variation within each group for any given week, with variation ranging from 2.5 to 5 units.
 
+## Problem 3 
+
+### Part 1 
+
+For each dataset, save μ̂  and the p-value arising from a test of H:μ=0 using α=0.05. 
+
+```{r}
+sim_mean = function(mu, n=30, sigma = 5) {
+  
+  sim_data = tibble(
+    x = rnorm(n = n, mean = mu, sd = sigma)
+  )
+  
+  sim_data %>%
+  t.test() %>%
+  broom::tidy()
+}
+sim_results = 
+  tibble(mu = c(0, 1, 2, 3, 4, 5, 6)) %>% 
+  mutate(
+    output_lists = map(.x = mu, ~rerun(5000, sim_mean(.x))),
+    estimate_dfs = map(output_lists, bind_rows)) %>% 
+  select(-output_lists) %>% 
+  unnest(estimate_dfs) %>% 
+  select(mu, estimate, p.value)
+```
+
+### Part 2 
+
+```{r graph 2 }
+plot2 = (
+sim_results %>%
+  group_by(mu) %>% 
+  summarize(
+    total = n(), 
+    null_rejected = sum(p.value < 0.05), 
+    proportion = null_rejected/total
+  ) %>% 
+  ggplot(aes(x = mu, y = proportion)) + 
+  geom_point() + 
+  geom_smooth(se = F) + 
+  labs(
+    title = "Power vs mean",
+    x = "true value",
+    y = "proportion of times null was rejected"
+  ))
+plot2
+```
+
+As effect size increases, the power also increases and plateaus after a point. 
+
+### Part 3 
+Filter to only those values when h0 was rejected. 
+
+```{r graph 3}
+sim_results2 = sim_results %>% 
+  filter(p.value < 0.05) %>% 
+  group_by(mu) %>% 
+  summarize(
+    mean_mu = mean(estimate)
+  ) 
+Plot3 = (
+  sim_results %>% 
+  group_by(mu) %>% 
+  summarize(
+    mean_mu = mean(estimate)) %>% 
+  ggplot(aes(y = mean_mu, x = mu)) + 
+    geom_line() + 
+    geom_point() +
+    geom_line(data = sim_results2, color = "red") +
+    geom_point(data = sim_results2, color = "red") +
+    labs(
+    title = "estimate mean vs true mean",
+    x = "true population mean",
+    y = "estimate mean"
+  ))
+Plot3
+```
+
+The lines don't overlap and thus, they are different from one another.
