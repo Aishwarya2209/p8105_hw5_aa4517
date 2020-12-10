@@ -225,4 +225,4 @@ Plot3 = (
 Plot3
 ```
 
-The lines don't overlap and thus, they are different from one another.
+The lines aren't overlapping. Thus, they are different from one another.
